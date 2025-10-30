@@ -1,92 +1,120 @@
 import streamlit as st
-import speech_recognition as sr
-import pyttsx3
+import os
+import time
+import glob
+from gtts import gTTS
 from PIL import Image
-import pytesseract
-import urllib.request
-import io
+import base64
 
-# --- Configuración general ---
-st.set_page_config(page_title="Interfaz Multimodal", page_icon="🎙️", layout="centered")
+# ---------- CONFIGURACIÓN DE PÁGINA ----------
+st.set_page_config(page_title="🎧 Conversión de Texto a Audio", page_icon="🎙️", layout="centered")
 
-st.title("🎙️ Interfaz Multimodal Inteligente")
-st.caption("Explora las funciones de texto, voz e imagen en un mismo espacio interactivo.")
+# ---------- ESTILO PERSONALIZADO ----------
+st.markdown("""
+    <style>
+    body {
+        background: linear-gradient(135deg, #F2E6FF, #E0F7FA);
+        color: #222;
+    }
+    .stButton>button {
+        background-color: #6C63FF;
+        color: white;
+        border-radius: 10px;
+        height: 45px;
+        width: 100%;
+        font-size: 16px;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #574BFF;
+        transform: scale(1.03);
+    }
+    .sidebar .sidebar-content {
+        background: #F4F0FF;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- Menú lateral ---
-opcion = st.sidebar.radio(
-    "Selecciona una función:",
-    ["🗣️ Voz a texto", "💬 Texto a voz", "🖼️ Análisis de imagen", "📄 OCR (leer texto en imagen)"]
-)
+# ---------- TÍTULO ----------
+st.title("🎧 Conversión de Texto a Audio")
 
-# --- VOZ A TEXTO ---
-if opcion == "🗣️ Voz a texto":
-    st.header("🎤 Voz a texto")
-    st.write("Convierte tu voz en texto usando el micrófono.")
+# ---------- IMAGEN PRINCIPAL ----------
+image = Image.open('gato_raton.png')
+st.image(image, width=350)
 
-    if st.button("Grabar y transcribir"):
-        r = sr.Recognizer()
-        with sr.Microphone() as source:
-            st.info("🎙️ Escuchando... habla claramente.")
-            audio = r.listen(source)
-
-        try:
-            text = r.recognize_google(audio, language="es-ES")
-            st.success("✅ Transcripción:")
-            st.write(text)
-        except sr.UnknownValueError:
-            st.error("No se entendió lo que dijiste.")
-        except sr.RequestError:
-            st.error("Error con el servicio de reconocimiento de voz.")
-
-# --- TEXTO A VOZ ---
-elif opcion == "💬 Texto a voz":
-    st.header("🗣️ Texto a voz")
-    st.write("Convierte texto escrito en voz.")
-
-    text = st.text_area("Escribe algo:", "Hola, esto es una prueba de voz generada por IA.")
-    if st.button("Reproducir voz"):
-        engine = pyttsx3.init()
-        st.info("🔊 Reproduciendo...")
-        engine.say(text)
-        engine.runAndWait()
-
-# --- ANÁLISIS DE IMAGEN ---
-elif opcion == "🖼️ Análisis de imagen":
-    st.header("🖼️ Análisis visual de una obra")
-    st.write("Explora una imagen y reflexiona sobre su contenido artístico o emocional.")
-
-    # Imagen desde Unsplash (para evitar error 403)
-    image_url = "https://images.unsplash.com/photo-1505664194779-8beaceb93744"
+# ---------- SIDEBAR ----------
+with st.sidebar:
+    st.header("📚 Texto de ejemplo")
+    st.info("Escribe o selecciona el texto que quieres escuchar.")
+    
     try:
-        req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req) as response:
-            img_data = response.read()
-        img = Image.open(io.BytesIO(img_data))
-        st.image(img, width=400, caption="The Thinker — Auguste Rodin (Unsplash)")
-    except Exception as e:
-        st.error(f"No se pudo cargar la imagen: {e}")
-        st.info("El pensador es algo irrepensentable, realmente podemos tener una verisón física del pensamiento?")
+        os.mkdir("temp")
+    except:
+        pass
 
-# --- OCR (LECTURA DE TEXTO EN IMÁGENES) ---
-elif opcion == "📄 OCR (leer texto en imagen)":
-    st.header("📄 Reconocimiento de texto en imágenes")
-    st.write("Sube una imagen con texto para extraer su contenido automáticamente.")
+    st.subheader("Una pequeña fábula de Franz Kafka")
+    st.write(
+        "“¡Ay! —dijo el ratón—. El mundo se hace cada día más pequeño. "
+        "Al principio era tan grande que le tenía miedo. Corría y corría "
+        "y me alegraba ver esos muros, a diestra y siniestra, en la distancia. "
+        "Pero esas paredes se estrechan tan rápido que me encuentro en el último cuarto "
+        "y ahí en el rincón está la trampa sobre la cual debo pasar. "
+        "Todo lo que debes hacer es cambiar de rumbo —dijo el gato—... y se lo comió.”"
+    )
 
-    uploaded_file = st.file_uploader("Selecciona una imagen...", type=["jpg", "jpeg", "png"])
+# ---------- INPUT PRINCIPAL ----------
+st.markdown("### ✍️ Ingresa el texto que quieres convertir en audio")
+text = st.text_area("Texto a escuchar", placeholder="Escribe o pega tu texto aquí...")
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Imagen cargada", use_container_width=True)
+# ---------- IDIOMA ----------
+option_lang = st.selectbox("🌎 Selecciona el idioma", ("Español", "English"))
+lg = 'es' if option_lang == "Español" else 'en'
 
-        if st.button("📜 Leer texto"):
-            try:
-                text = pytesseract.image_to_string(image, lang="spa")
-                if text.strip():
-                    st.success("✅ Texto detectado:")
-                    st.write(text)
-                else:
-                    st.warning("No se detectó texto en la imagen.")
-            except Exception as e:
-                st.error(f"Error al procesar la imagen: {e}")
+# ---------- CONVERSIÓN ----------
+def text_to_speech(text, tld, lg):
+    tts = gTTS(text, lang=lg)
+    try:
+        my_file_name = text[0:20].strip().replace(" ", "_")
+    except:
+        my_file_name = "audio"
+    tts.save(f"temp/{my_file_name}.mp3")
+    return my_file_name, text
 
+# ---------- BOTÓN CONVERTIR ----------
+if st.button("🔊 Convertir a Audio"):
+    if text.strip() == "":
+        st.warning("⚠️ Por favor escribe algún texto antes de convertir.")
+    else:
+        result, output_text = text_to_speech(text, 'com', lg)
+        audio_path = f"temp/{result}.mp3"
 
+        # Mostrar reproductor de audio
+        st.success("✅ ¡Tu audio está listo!")
+        audio_file = open(audio_path, "rb")
+        audio_bytes = audio_file.read()
+        st.audio(audio_bytes, format="audio/mp3", start_time=0)
+
+        # Descarga del archivo
+        with open(audio_path, "rb") as f:
+            data = f.read()
+
+        def get_binary_file_downloader_html(bin_file, file_label='Archivo'):
+            bin_str = base64.b64encode(data).decode()
+            href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file)}" style="color:#574BFF;font-weight:bold;">⬇️ Descargar {file_label}</a>'
+            return href
+
+        st.markdown(get_binary_file_downloader_html(audio_path, "Archivo de audio"), unsafe_allow_html=True)
+
+# ---------- LIMPIEZA AUTOMÁTICA ----------
+def remove_files(n):
+    mp3_files = glob.glob("temp/*.mp3")
+    if len(mp3_files) != 0:
+        now = time.time()
+        n_days = n * 86400
+        for f in mp3_files:
+            if os.stat(f).st_mtime < now - n_days:
+                os.remove(f)
+                print("Deleted ", f)
+
+remove_files(7)
