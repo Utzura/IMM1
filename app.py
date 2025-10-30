@@ -5,7 +5,6 @@ import glob
 from gtts import gTTS
 from PIL import Image
 import base64
-
 # ---------- CONFIGURACIÓN DE PÁGINA ----------
 st.set_page_config(page_title="🎧 Conversión de Texto a Audio", page_icon="🎙️", layout="centered")
 
